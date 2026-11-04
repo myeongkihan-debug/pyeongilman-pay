@@ -49,8 +49,13 @@
     $("next").hidden = !/otp_expired|expired/i.test(err + " " + desc);
     return;
   }
-  show(true, type === "recovery" ? "본인 확인이 완료되었습니다" : "이메일 인증이 완료되었습니다",
-    "가입한 이메일 주소가 확인되었습니다.");
+  if (type === "recovery") {
+    // 비밀번호는 앱에서만 바꾼다 (이 페이지는 받은 토큰을 쓰지 않고 버림)
+    show(false, "비밀번호는 Pyeongilman 앱에서 바꿉니다",
+      "메일의 링크로는 비밀번호를 바꿀 수 없습니다. 앱의 '비밀번호 찾기'에서 인증코드를 다시 요청해, 새 메일의 6자리 코드를 입력하세요 (링크는 누르지 마세요). 이메일 주소 인증은 완료되었습니다.");
+    return;
+  }
+  show(true, "이메일 인증이 완료되었습니다", "가입한 이메일 주소가 확인되었습니다.");
   $("next").hidden = false;
 })();
 </script>
