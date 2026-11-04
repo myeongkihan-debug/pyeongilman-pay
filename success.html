@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>결제 확인 중 — 평일만</title>
+<style>
+  body { margin:0; background:#f4f6fa; font-family:"Malgun Gothic","Apple SD Gothic Neo",sans-serif; color:#1e2430; }
+  main { max-width:520px; margin:48px auto; padding:0 16px; }
+  .card { background:#fff; border:1px solid #dce2ec; border-radius:10px; padding:24px; }
+  h1 { font-size:20px; color:#102a5c; margin:0 0 12px; }
+  p { line-height:1.7; } .ok { color:#1e8c50; } .err { color:#dc3232; } a { color:#102a5c; }
+</style>
+</head>
+<body>
+<main><div class="card">
+  <h1 id="title">결제를 확인하고 있습니다…</h1>
+  <p id="msg">창을 닫지 마세요.</p>
+  <p id="receipt"></p>
+</div></main>
+<script>
+(async function () {
+  const q = new URLSearchParams(location.search);
+  const confirmUrl = q.get("confirmUrl") || "";
+  const body = { paymentKey: q.get("paymentKey"), orderId: q.get("orderId"), amount: Number(q.get("amount")) };
+  const $ = (id) => document.getElementById(id);
+  const show = (ok, title, msg) => { $("title").textContent = title; $("title").className = ok ? "ok" : "err"; $("msg").textContent = msg; };
+  if (!/^https:\/\/[a-z0-9-]+\.supabase\.co\/functions\/v1\/toss-confirm$/i.test(confirmUrl) || !body.paymentKey || !body.orderId) {
+    show(false, "결제 확인 실패", "결제 정보가 올바르지 않습니다. Pyeongilman 에서 다시 시도하거나 관리자에게 문의하세요."); return;
+  }
+  try {
+    const res = await fetch(confirmUrl, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const r = await res.json();
+    if (r.ok) {
+      show(true, "결제가 완료되었습니다", "이 창을 닫고 Pyeongilman 에서 '결제 확인'을 누르세요. 신규 가입은 관리자 승인 후 사용할 수 있습니다.");
+      if (r.receiptUrl && /^https:\/\//.test(r.receiptUrl)) {
+        const a = document.createElement("a"); a.href = r.receiptUrl; a.target = "_blank"; a.rel = "noopener"; a.textContent = "카드 영수증 보기";
+        $("receipt").appendChild(a);
+      }
+    } else show(false, "결제 승인 실패", r.message || "결제를 승인하지 못했습니다.");
+  } catch (e) { show(false, "결제 확인 실패", "서버에 연결하지 못했습니다: " + e.message); }
+})();
+</script>
+</body>
+</html>

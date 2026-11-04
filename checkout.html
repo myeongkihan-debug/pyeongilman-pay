@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>평일만 구독 결제</title>
+<style>
+  :root { --navy:#102a5c; --muted:#6e7887; --bg:#f4f6fa; --card:#fff; --border:#dce2ec; --red:#dc3232; }
+  body { margin:0; background:var(--bg); font-family:"Malgun Gothic","Apple SD Gothic Neo",sans-serif; color:#1e2430; }
+  main { max-width:520px; margin:48px auto; padding:0 16px; }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:24px; }
+  h1 { font-size:20px; color:var(--navy); margin:0 0 16px; }
+  dl { display:grid; grid-template-columns:110px 1fr; gap:8px 12px; margin:0 0 20px; }
+  dt { color:var(--muted); } dd { margin:0; font-weight:600; }
+  button { width:100%; padding:14px; border:0; border-radius:8px; background:var(--navy); color:#fff; font-size:16px; cursor:pointer; }
+  button:disabled { opacity:.5; cursor:default; }
+  .msg { margin-top:14px; color:var(--muted); font-size:13px; line-height:1.6; }
+  .err { color:var(--red); }
+</style>
+<script src="https://js.tosspayments.com/v2/standard"></script>
+</head>
+<body>
+<main>
+  <div class="card">
+    <h1>평일만(Pyeongilman) 구독 결제</h1>
+    <dl>
+      <dt>상품</dt><dd id="name">-</dd>
+      <dt>결제 금액</dt><dd id="amount">-</dd>
+      <dt>주문번호</dt><dd id="order" style="font-weight:400;font-size:12px">-</dd>
+      <dt>계정</dt><dd id="email" style="font-weight:400">-</dd>
+    </dl>
+    <button id="pay" disabled>카드로 결제하기</button>
+    <p class="msg" id="msg">결제가 끝나면 이 창을 닫고 Pyeongilman 에서 '결제 확인'을 누르세요. 결제 정보는 토스페이먼츠가 처리하며 이 페이지에 저장되지 않습니다.</p>
+  </div>
+</main>
+<script>
+(function () {
+  const q = new URLSearchParams(location.search);
+  const p = {
+    orderId: q.get("orderId") || "", amount: Number(q.get("amount")), orderName: q.get("orderName") || "",
+    customerKey: q.get("customerKey") || "", email: q.get("email") || "", clientKey: q.get("clientKey") || "",
+    confirmUrl: q.get("confirmUrl") || ""
+  };
+  const $ = (id) => document.getElementById(id);
+  const fail = (t) => { $("msg").textContent = t; $("msg").className = "msg err"; };
+  // 값 검증 (주소창 조작 방지 — 금액은 서버 승인 단계에서 다시 대조)
+  const okConfirm = /^https:\/\/[a-z0-9-]+\.supabase\.co\/functions\/v1\/toss-confirm$/i.test(p.confirmUrl);
+  if (!/^PYM-[0-9a-f-]{36}$/i.test(p.orderId) || !(p.amount > 0) || !p.clientKey || !p.customerKey || !okConfirm) {
+    fail("결제 정보가 올바르지 않습니다. Pyeongilman 에서 결제를 다시 시작하세요."); return;
+  }
+  $("name").textContent = p.orderName;
+  $("amount").textContent = p.amount.toLocaleString("ko-KR") + "원";
+  $("order").textContent = p.orderId;
+  $("email").textContent = p.email;
+  const base = location.href.split("?")[0].replace(/checkout\.html$/, "");
+  const back = "?confirmUrl=" + encodeURIComponent(p.confirmUrl);
+  let payment;
+  try {
+    payment = TossPayments(p.clientKey).payment({ customerKey: p.customerKey });
+    $("pay").disabled = false;
+  } catch (e) { fail("결제 모듈을 불러오지 못했습니다: " + e.message); return; }
+  $("pay").addEventListener("click", async () => {
+    $("pay").disabled = true;
+    try {
+      await payment.requestPayment({
+        method: "CARD",
+        amount: { currency: "KRW", value: p.amount },
+        orderId: p.orderId,
+        orderName: p.orderName,
+        customerEmail: p.email || undefined,
+        successUrl: base + "success.html" + back,
+        failUrl: base + "fail.html" + back,
+        card: { useEscrow: false, flowMode: "DEFAULT", useCardPoint: false, useAppCardOnly: false }
+      });
+    } catch (e) { fail("결제를 시작하지 못했습니다: " + (e.message || e)); $("pay").disabled = false; }
+  });
+})();
+</script>
+</body>
+</html>

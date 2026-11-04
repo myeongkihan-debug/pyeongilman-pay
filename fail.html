@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>결제 실패 — 평일만</title>
+<style>
+  body { margin:0; background:#f4f6fa; font-family:"Malgun Gothic","Apple SD Gothic Neo",sans-serif; color:#1e2430; }
+  main { max-width:520px; margin:48px auto; padding:0 16px; }
+  .card { background:#fff; border:1px solid #dce2ec; border-radius:10px; padding:24px; }
+  h1 { font-size:20px; color:#dc3232; margin:0 0 12px; } p { line-height:1.7; }
+</style>
+</head>
+<body>
+<main><div class="card">
+  <h1>결제가 완료되지 않았습니다</h1>
+  <p id="msg"></p>
+  <p>이 창을 닫고 Pyeongilman 에서 결제를 다시 시도하세요.</p>
+</div></main>
+<script>
+  const q = new URLSearchParams(location.search);
+  document.getElementById("msg").textContent = (q.get("message") || "결제가 취소되었거나 실패했습니다.") + (q.get("code") ? " (" + q.get("code") + ")" : "");
+</script>
+</body>
+</html>
